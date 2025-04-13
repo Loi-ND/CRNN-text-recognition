@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import string
+from typing import List
 
 class Encoder(nn.Module):
     def __init__(self, in_channels):
@@ -81,34 +81,67 @@ class Decoder(nn.Module):
         self.blstm_1 = nn.LSTM(input_size=512,
                                hidden_size=128,
                                dropout=0.2,
-                               bidirectional=True)
+                               batch_first=True,
+                               bidirectional=True,
+                               num_layers=2)
         self.blstm_2 = nn.LSTM(input_size=256,
                                hidden_size=128,
                                dropout=0.2,
-                               bidirectional=True)
+                               batch_first=True,
+                               bidirectional=True,
+                               num_layers=2)
         self.output = nn.Linear(in_features=256,
-                                out_features=61)
-        self.activation = nn.Softmax(dim=-1)
+                                out_features=63)
     
     def forward(self, x: torch.Tensor):
         x, (hn, cn) = self.blstm_1(x)
         x, (hn, cn) = self.blstm_2(x)
         x = self.output(x)
-        x = self.activation(x)
-
+        x = x.permute(1, 0, 2)
         return x
+    
 class CRNN(nn.Module):
     def __init__(self, in_channels):
         super(CRNN, self).__init__()
         self.encoder = Encoder(in_channels=in_channels)
         self.decoder = Decoder()
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor, targets: List[torch.Tensor] = None):
+        batch_size, c, h, w = x.size()
         x = self.encoder(x)
         x = self.decoder(x)
-        return x
 
-sample = torch.rand(1, 1, 32, 128)
+        log_probs = torch.nn.functional.log_softmax(x, dim=2)
+
+        if targets is not None:
+            input_lengths = torch.full(
+                size=(batch_size, ),
+                fill_value=x.size(0),
+                dtype=torch.int32
+            )
+
+            target_lengths = torch.zeros((batch_size, ), 
+                                         dtype=torch.int32)
+            for i, target in enumerate(targets):
+                target_lengths[i] = len(target)
+
+            targets = torch.cat(tensors=targets) 
+
+            loss = nn.CTCLoss(blank=0)(
+                log_probs, 
+                targets,
+                input_lengths,
+                target_lengths
+            )
+
+            return x, loss
+        return log_probs
+
+sample = torch.ones((2, 1, 32, 128))
+a = torch.randint(low=1, high=61, size=(12,), dtype=torch.long)
+b = torch.randint(low=1, high=61, size=(21,), dtype=torch.long)
+
+targets = [a, b]
 model = CRNN(in_channels=1)
-print(torch.sum(model(sample), dim=-1))
-
+output, loss = model(sample, targets)
+print(output.shape, loss.item())
