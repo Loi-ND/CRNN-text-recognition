@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from typing import List
+from utils import decode_targets
 
 class Encoder(nn.Module):
     def __init__(self, in_channels):
@@ -134,14 +135,14 @@ class CRNN(nn.Module):
                 target_lengths
             )
 
-            return x, loss
-        return log_probs
+            return log_probs.permute(1, 0, 2), loss
+        return log_probs.permute(1, 0, 2)
 
-sample = torch.ones((2, 1, 32, 128))
+sample = torch.ones((1, 1, 32, 128))
 a = torch.randint(low=1, high=61, size=(12,), dtype=torch.long)
 b = torch.randint(low=1, high=61, size=(21,), dtype=torch.long)
 
 targets = [a, b]
 model = CRNN(in_channels=1)
-output, loss = model(sample, targets)
-print(output.shape, loss.item())
+output = model(sample)
+print(decode_targets(output))

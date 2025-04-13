@@ -31,12 +31,22 @@ def encode_targets(targets: List[str]) -> List[torch.Tensor]:
 
 
 def decode_targets(targets: torch.Tensor):
-    if targets.dim() == 2:
+    targets = torch.argmax(targets, dim=-1)
+    if targets.dim() == 1:
         tmp = ''
-        output = torch.argmax(targets, dim=-1)
-        
+        output = remove_duplicate(target=targets)
+        for idx in output:
+            tmp += chars[idx-1]
+        return tmp
+    else:
+        out = []
+        for target in targets:
+            tmp = ''
+            output = remove_duplicate(target=target)
+            for idx in output:
+                tmp += chars[idx-1]
+            out.append(tmp)
+        return out
             
 
-a = torch.tensor([1, 2, 3, 2,2,2,2,2,2,2, 0,0, 2, 1])
-print(remove_duplicate(a))
 
