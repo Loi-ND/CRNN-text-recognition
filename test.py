@@ -1,16 +1,14 @@
-import torch
+import scipy.io as io
+import numpy as np
 
-criterion = torch.nn.CTCLoss(reduction='mean')
+mat = io.loadmat('data/trainCharBound.mat')
+data: np.ndarray = mat['trainCharBound']
+num_samples = data.shape[1]
+max_len = 0
+for i in range(num_samples):
+    sample = data[0, i]
+    img_path = 'data/' + sample[0][0]
+    label = sample[1][0]
+    max_len = max(max_len, len(label))
 
-T = 50
-C = 20
-N = 16
-S = 30
-S_min = 10
-input = torch.randn(T, N, C).log_softmax(2).detach().requires_grad_()
-target = torch.randint(low=1, high=C, size=(N, S), dtype=torch.long)
-
-input_lengths = torch.full(size=(N,), fill_value=T, dtype=torch.long)
-target_lengths = torch.randint(low=S_min, high=S, size=(N,), dtype=torch.long)
-loss = criterion(input, target, input_lengths, target_lengths)
-print(loss.item())
+print(max_len)
