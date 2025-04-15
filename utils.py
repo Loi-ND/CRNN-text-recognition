@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 from typing import List, Tuple
 import string
 from tqdm import tqdm
+from dataset import CustomDataset
 
 chars = string.ascii_letters + string.digits
 directory = {char: i+1 for i, char in enumerate(chars)}
@@ -32,18 +33,26 @@ def encode_targets(targets: List[str]) -> List[torch.Tensor]:
         output.append(tmp)
     return output
 
-
-def decode_targets(targets: torch.Tensor):
-    targets = torch.argmax(targets, dim=-1)
-    if targets.dim() == 1:
+def decode_targets(targets: List[torch.Tensor]) -> List[str]:
+    decoded_targets = []
+    for target in targets:
         tmp = ''
-        output = remove_duplicate(target=targets)
+        for value in target:
+            tmp += chars[value.item()-1]
+        decoded_targets.append(tmp)
+    return decoded_targets
+
+def decode_outputs(outputs: torch.Tensor):
+    outputs = torch.argmax(outputs, dim=-1)
+    if outputs.dim() == 1:
+        tmp = ''
+        output = remove_duplicate(target=outputs)
         for idx in output:
             tmp += chars[idx-1]
         return tmp
     else:
         out = []
-        for target in targets:
+        for target in outputs:
             tmp = ''
             output = remove_duplicate(target=target)
             for idx in output:
@@ -69,7 +78,8 @@ def train_step(model: nn.Module,
                epochs: int,
                device: str):
     model.to(device=device)
-    for epoch in tqdm(epochs):
+    model.train(True)
+    for epoch in tqdm(range(epochs)):
         num_samples = 0
         cumsum_loss = 0
         for i, (data, label) in enumerate(train_dataloader):
@@ -84,6 +94,33 @@ def train_step(model: nn.Module,
         print(f'Epochs {epoch + 1} Training loss = {(cumsum_loss/num_samples):.2f}')
 
 def evaluate(model: nn.Module,
-             test_dataloader: DataLoader) -> float:
-    outputs = decode_targets(outputs)
+             test_dataloader: DataLoader,
+             device: str) -> float:
+    with torch.inference_mode():
+        model.eval()
+        model.to(device)
+        for i, (data, targets) in enumerate(test_dataloader):
+            data = data.to(device)
+            outputs = model(data)
+            decoded_outputs = decode_outputs(outputs)
+            decoded_targets = decode_targets(targets)
+
+            precision = 0
+            length = 0
+            common_length = len(decoded_outputs)
+            length += common_length
+            for i in range(common_length):
+                precision += decoded_outputs[i] == decode_targets[i]
+
+    return precision / length
         
+def create_dataloader(data_paths: str,
+                      batch_size: int,
+                      shuffle: bool):
+    image_paths, targets = get_data_paths(paths=data_paths)
+    data = CustomDataset(image_paths=image_paths,
+                         targets=targets)
+    dataloader = DataLoader(dataset=data,
+                            batch_size=batch_size,
+                            shuffle=shuffle)
+    return dataloader

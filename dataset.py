@@ -8,8 +8,7 @@ import config
 class CustomDataset(Dataset):
     def __init__(self, 
                  image_paths: List[str], 
-                 targets: List[torch.Tensor],
-                 image_shape: Tuple[int, int]):
+                 targets: List[torch.Tensor]):
         super().__init__()
         self.image_paths = image_paths
         self.targets = targets
