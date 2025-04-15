@@ -137,12 +137,3 @@ class CRNN(nn.Module):
 
             return log_probs.permute(1, 0, 2), loss
         return log_probs.permute(1, 0, 2)
-
-sample = torch.ones((1, 1, 32, 128))
-a = torch.randint(low=1, high=61, size=(12,), dtype=torch.long)
-b = torch.randint(low=1, high=61, size=(21,), dtype=torch.long)
-
-targets = [a, b]
-model = CRNN(in_channels=1)
-output = model(sample)
-print(decode_outputs(output))
