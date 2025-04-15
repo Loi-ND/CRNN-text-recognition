@@ -1,6 +1,9 @@
 import torch
-from typing import List
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from typing import List, Tuple
 import string
+from tqdm import tqdm
 
 chars = string.ascii_letters + string.digits
 directory = {char: i+1 for i, char in enumerate(chars)}
@@ -47,6 +50,40 @@ def decode_targets(targets: torch.Tensor):
                 tmp += chars[idx-1]
             out.append(tmp)
         return out
-            
 
+def get_data_paths(paths: str) -> Tuple[List[str], List[torch.Tensor]]:
+    image_paths = []
+    targets = []
+    with open(paths, mode='r') as file:
+        for line in file.readlines():
+            image_path, target = line.split()
+            targets.append(target)
+            image_paths.append(image_path)
+    targets = encode_targets(targets)
 
+    return image_paths, targets
+
+def train_step(model: nn.Module,
+               optimizer: torch.optim.Optimizer,
+               train_dataloader: DataLoader,
+               epochs: int,
+               device: str):
+    model.to(device=device)
+    for epoch in tqdm(epochs):
+        num_samples = 0
+        cumsum_loss = 0
+        for i, (data, label) in enumerate(train_dataloader):
+            num_samples += len(data)
+            data = data.to(device)
+            optimizer.zero_grad()
+
+            output, loss = model(data, label)   
+            cumsum_loss += loss.item()
+            loss.backward()
+            optimizer.step()
+        print(f'Epochs {epoch + 1} Training loss = {(cumsum_loss/num_samples):.2f}')
+
+def evaluate(model: nn.Module,
+             test_dataloader: DataLoader) -> float:
+    outputs = decode_targets(outputs)
+        

@@ -3,6 +3,7 @@ from typing import List, Tuple
 import torch
 from torchvision.transforms import Normalize, Resize, Compose, ToTensor
 from PIL import Image
+import config
 
 class CustomDataset(Dataset):
     def __init__(self, 
@@ -16,7 +17,7 @@ class CustomDataset(Dataset):
         std = [0.225]
         self.transform = Compose(
             [
-                Resize(image_shape),
+                Resize((config.IMAGE_HEIGHT, config.IMAGE_HEIGHT)),
                 Normalize(mean=mean, std=std),
                 ToTensor()
             ]

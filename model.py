@@ -128,7 +128,7 @@ class CRNN(nn.Module):
 
             targets = torch.cat(tensors=targets) 
 
-            loss = nn.CTCLoss(blank=0)(
+            loss = nn.CTCLoss(blank=0, reduction='sum')(
                 log_probs, 
                 targets,
                 input_lengths,
