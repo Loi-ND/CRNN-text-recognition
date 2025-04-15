@@ -1,5 +1,10 @@
+from model import CRNN
+from trainer import Trainer
 import config
-from utils import get_data_paths
 
-data_paths, targets = get_data_paths(config.TRAIN_DATA_PATHS)
-print(targets)
+crnn_model = CRNN(in_channels=1)
+trainer = Trainer(model=crnn_model,
+                  learning_rate=1e-4,
+                  batch_size=32,
+                  device=config.DEVICE,
+                  epochs=10)
